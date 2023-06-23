@@ -69,7 +69,11 @@ impl Game {
     }
 
     pub fn search_string(&self) -> String {
-        format!("go wtime {} btime {}\n", self.time.0, self.time.1)
+        format!(
+            "go wtime {} btime {}\n",
+            self.time.0 * 1000,
+            self.time.1 * 1000
+        )
     }
 
     pub fn position_string(&self) -> String {
