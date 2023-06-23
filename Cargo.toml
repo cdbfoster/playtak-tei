@@ -1,9 +1,10 @@
 [package]
 name = "playtak-tei"
-version = "0.1.0"
+version = "1.0.0"
+authors = ["Chris Foster <cdbfoster@gmail.com>"]
+license = "GPL-3.0-or-later"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 async-std = { version = "1.12", features = ["unstable"] }
