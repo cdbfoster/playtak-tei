@@ -56,11 +56,20 @@ struct ListCommand {
 }
 
 #[derive(Args, Debug)]
+#[group(required = true)]
+struct AcceptInfo {
+    #[arg(short, long = "seek")]
+    seek_id: Option<u32>,
+    #[arg(short, long)]
+    opponent: Option<String>,
+}
+
+#[derive(Args, Debug)]
 struct AcceptCommand {
     #[command(flatten)]
     login: Login,
-    #[arg(short, long = "seek")]
-    seek_id: u32,
+    #[command(flatten)]
+    accept: AcceptInfo,
     #[arg(required = true, num_args = 1.., trailing_var_arg = true)]
     engine_arguments: Vec<String>,
 }
@@ -264,9 +273,22 @@ async fn main_inner(args: ArgCommand) -> io::Result<()> {
 
     // Post or accept the seek.
     match &args {
-        ArgCommand::Accept(AcceptCommand { seek_id, .. }) => {
-            info!("Accepting seek {seek_id}.");
-            write(&mut playtak_writer, format!("Accept {seek_id}\n")).await?;
+        ArgCommand::Accept(AcceptCommand {
+            accept: AcceptInfo { seek_id, opponent }, ..
+        }) => {
+            if let Some(seek_id) = seek_id {
+                info!("Accepting seek {seek_id}.");
+                write(&mut playtak_writer, format!("Accept {seek_id}\n")).await?;
+            } else if let Some(opponent) = opponent {
+                if let Some(seek) = seeks.iter().find(|s| s.player.as_ref() == Some(opponent)) {
+                    let seek_id = seek.id.unwrap();
+                    info!(id = seek_id, "Accepting seek from {opponent}.");
+                    write(&mut playtak_writer, format!("Accept {seek_id}\n")).await?;
+                } else {
+                    error!("Cannot find seek from {opponent}.");
+                    return Err(err!());
+                }
+            }
         }
         ArgCommand::Seek(SeekCommand { seek, .. }) => {
             info!("Posting seek.");
