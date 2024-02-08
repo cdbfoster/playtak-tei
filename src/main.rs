@@ -195,52 +195,16 @@ async fn main_inner(args: ArgCommand) -> io::Result<()> {
             if response == "Authentication failure" {
                 error!("Could not authenticate. Are the username and password correct?");
                 return Err(err!());
-            } else if response.starts_with("Game Start") {
-                info!("Resuming game.");
-
-                let mut game = response.parse::<Game>().map_err(|error| err!(error))?;
-
-                'resume: loop {
-                    let line = read(&mut playtak_reader).await?;
-
-                    if line != "Message Your game is resumed" {
-                        let parts = line.split_ascii_whitespace().collect::<Vec<_>>();
-
-                        if parts[1] == "P" || parts[1] == "M" {
-                            game.moves.push(GameMove::from_playtak(&line)?);
-                        } else if parts[1] == "Time" {
-                            game.time = (
-                                parts[2]
-                                    .parse::<u32>()
-                                    .map_err(|_| err!("could not parse white time"))?,
-                                parts[3]
-                                    .parse::<u32>()
-                                    .map_err(|_| err!("could not parse black time"))?,
-                            );
-                        }
-                    } else {
-                        break 'resume;
-                    }
-                }
-
-                let (engine_writer, engine_reader) = initialize_engine(&args, &game).await?;
-
-                return run_game(
-                    game,
-                    (engine_writer, engine_reader),
-                    (playtak_writer, playtak_reader),
-                )
-                .await;
-            } else if !response.starts_with("Welcome") {
-                error!("Could not log in.");
-                return Err(err!());
-            } else {
+            } else if response.starts_with("Welcome") {
                 response
                     .split_ascii_whitespace()
                     .nth(1)
                     .and_then(|n| n.strip_suffix('!'))
                     .map(|n| n.to_owned())
                     .expect("could not parse login name")
+            } else {
+                error!("Could not log in.");
+                return Err(err!());
             }
         }
     };
@@ -254,6 +218,42 @@ async fn main_inner(args: ArgCommand) -> io::Result<()> {
         // Read only until the server is done sending seeks.
         if input.starts_with("Seek new") {
             seeks.push(input.parse::<Seek>().map_err(|error| err!(error))?);
+        } else if input.starts_with("Game Start") {
+            info!("Resuming game.");
+
+            let mut game = input.parse::<Game>().map_err(|error| err!(error))?;
+
+            'resume: loop {
+                let line = read(&mut playtak_reader).await?;
+
+                if line != "Message Your game is resumed" {
+                    let parts = line.split_ascii_whitespace().collect::<Vec<_>>();
+
+                    if parts[1] == "P" || parts[1] == "M" {
+                        game.moves.push(GameMove::from_playtak(&line)?);
+                    } else if parts[1] == "Time" {
+                        game.time = (
+                            parts[2]
+                                .parse::<u32>()
+                                .map_err(|_| err!("could not parse white time"))?,
+                            parts[3]
+                                .parse::<u32>()
+                                .map_err(|_| err!("could not parse black time"))?,
+                        );
+                    }
+                } else {
+                    break 'resume;
+                }
+            }
+
+            let (engine_writer, engine_reader) = initialize_engine(&args, &game).await?;
+
+            return run_game(
+                game,
+                (engine_writer, engine_reader),
+                (playtak_writer, playtak_reader),
+            )
+            .await;
         } else {
             break;
         }
