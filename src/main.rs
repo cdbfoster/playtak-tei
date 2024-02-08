@@ -274,7 +274,8 @@ async fn main_inner(args: ArgCommand) -> io::Result<()> {
     // Post or accept the seek.
     match &args {
         ArgCommand::Accept(AcceptCommand {
-            accept: AcceptInfo { seek_id, opponent }, ..
+            accept: AcceptInfo { seek_id, opponent },
+            ..
         }) => {
             if let Some(seek_id) = seek_id {
                 info!("Accepting seek {seek_id}.");
@@ -419,8 +420,9 @@ async fn run_game(
         _ => false,
     };
 
+    write(&mut engine_writer, game.new_game_string()).await?;
+
     if our_turn {
-        write(&mut engine_writer, game.new_game_string()).await?;
         write(&mut engine_writer, game.position_string()).await?;
         write(&mut engine_writer, game.search_string()).await?;
     }
